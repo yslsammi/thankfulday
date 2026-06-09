@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>父親節心意卡製作遊戲</title>
+    <style>
+        :root { --primary: #007AFF; --success: #28a745; --bg: #f2f2f7; --card-border: #FF9500; }
+        * { -webkit-touch-callout: none; -webkit-user-select: none; touch-action: none; box-sizing: border-box; }
+        body, html { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background: var(--bg); font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; position: fixed; }
+        
+        /* 廣東話提示欄 */
+        #task-hint { position: absolute; top: 0; left: 0; width: 100%; height: 12vh; background: #fff; display: flex; justify-content: center; align-items: center; font-size: 2.3rem; font-weight: bold; z-index: 100; border-bottom: 8px solid var(--primary); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .replay-btn { margin-left: 20px; background: #eee; border: 3px solid #ccc; border-radius: 50%; width: 60px; height: 60px; font-size: 1.8rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        #home-btn { position: absolute; top: 15px; right: 20px; z-index: 500; background: #ff3b30; color: white; border: none; border-radius: 10px; padding: 12px 20px; font-size: 1.2rem; cursor: pointer; }
+        
+        /* 遊戲舞台 */
+        #game-stage { position: absolute; top: 12vh; left: 0; width: 100vw; height: 88vh; display: flex; z-index: 10; background: #e5e5ea; }
+        .stage-half { flex: 1; height: 100%; display: flex; justify-content: center; align-items: center; position: relative; }
+        #center-line { position: absolute; left: 50%; top: 5%; height: 90%; width: 8px; background: #fff; transform: translateX(-50%); z-index: 20; border-radius: 4px; }
+
+        /* 視藝卡片美化 */
+        .food-card { 
+            position: relative; background: #fff; border-radius: 40px; border: 15px solid var(--card-border); 
+            width: 44vw; height: 72vh; max-width: 600px; max-height: 500px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; overflow: hidden;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.15); z-index: 30;
+        }
+        .food-card .emoji { font-size: 12rem; margin-bottom: 10px; }
+        .food-card .label { font-size: 2.5rem; font-weight: bold; color: #333; }
+
+        /* 完美亮度獨立成功層 */
+        #dim-layer { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9000; display: none; }
+        #success-container { position: fixed; inset: 0; z-index: 9999; display: none; justify-content: center; align-items: center; pointer-events: none; }
+        
+        .focus-center { 
+            position: relative !important; transform: scale(1.1) !important; 
+            z-index: 9999 !important; border-color: var(--success) !important; 
+            width: 80vw !important; height: 75vh !important;
+            box-shadow: 0 0 100px rgba(40,167,69,0.6) !important;
+            filter: brightness(100%) !important; background: #fff !important;
+        }
+        
+        .progress-bar { position: absolute; bottom: 0; left: 0; width: 0%; height: 35px; background: #ffcc00; z-index: 100; }
+
+        /* 老師的設定面板 */
+        #settings-panel { position: fixed; inset: 0; background: #f2f2f7; z-index: 3000; padding: 30px; display: flex; flex-direction: column; align-items: center; overflow-y: auto; }
+        .setting-section { width: 95%; max-width: 750px; background: white; padding: 25px; margin: 15px 0; border-radius: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .lv-item { display: flex; align-items: center; padding: 20px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 1.6rem; font-weight: bold; color: #555; }
+        .lv-item.active { background: #e1f5fe; border-radius: 15px; border: 3px solid var(--primary); color: var(--primary); }
+        .start-btn { width: 80%; max-width: 400px; padding: 25px; background: var(--success); color: #fff; border-radius: 50px; font-size: 2.5rem; font-weight: bold; margin-top: 30px; border: none; box-shadow: 0 10px 20px rgba(40,167,69,0.3); cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <audio id="cheer-sound" src="cheer.mp3" preload="auto"></audio>
+    <div id="dim-layer"></div>
+    <div id="success-container"></div>
+
+    <button id="home-btn" onclick="location.reload()" style="display:none;">🏠 重新設定</button>
+    
+    <div id="task-hint">
+        <span>請找出：</span><span id="target-name" style="color:var(--primary); margin-left:10px;">---</span>
+        <button class="replay-btn" id="btn-voice">🔊</button>
+    </div>
+
+    <div id="game-stage">
+        <div id="center-line"></div>
+        <div id="left-zone" class="stage-half"></div>
+        <div id="right-zone" class="stage-half"></div>
+    </div>
+
+    <div id="settings-panel">
+        <h1 style="font-size: 3rem; color: #1c1c1e; margin-bottom: 10px;">🎨 父親節心意卡製作遊戲</h1>
+        <p style="font-size: 1.3rem; color: #8e8e93; margin-bottom: 30px;">視覺藝術科 - 認知與設計平衡訓練</p>
+        
+        <div class="setting-section">
+            <h3 style="margin-top:0; font-size:1.8rem; color:var(--primary);">1. 選擇教學關卡</h3>
+            <div id="lv-list">
+                <div class="lv-item active" onclick="setLv(1)">第一關：認識父親節物件 (二選一對比)</div>
+                <div class="lv-item" onclick="setLv(2)">第二關：收集心意卡裝飾 (中西風格辨識)</div>
+                <div class="lv-item" onclick="setLv(3)">第三關：手眼協調拖拽 (把領帶送給爸爸)</div>
+            </div>
+        </div>
+
+        <div class="setting-section">
+            <h3 style="margin-top:0; font-size:1.8rem;">2. 學生注視/碰觸時間：<span id="time-txt" style="color:var(--primary); font-size:2rem;">1.0</span> 秒</h3>
+            <input type="range" id="time-range" min="0.4" max="2.5" step="0.1" value="1.0" style="width:100%; height:50px;" oninput="updateTimeUI(this.value)">
+        </div>
+        
+        <button class="start-btn" onclick="begin()">開始上課 🚀</button>
+    </div>
+
+    <script>
+        // 用高辨識度的大 Emoji 代替圖片，方便老師直接複製就能執行，也很有視藝科的設計感！
+        const fatherLib = [
+            {n:'爸爸的領帶', i:'👔'}, {n:'爸爸的西裝', i:'💼'}, 
+            {n:'送給爸爸的愛心', i:'❤️'}, {n:'爸爸愛喝的咖啡', i:'☕'},
+            {n:'爸爸的剃鬚刀', i:'🪒'}, {n:'祝爸爸No.1的獎杯', i:'🏆'}
+        ];
+        const counterLib = [
+            {n:'女仔裙', i:'👗'}, {n:'高跟鞋', i:'👠'}, {n:'化妝品', i:'💄'}, {n:'波棒糖', i:'🍭'}
+        ];
+
+        let cfg = { lv: 1, time: 1000 };
+        let currentIdx = 0, currentItems = [], lastTarget = "", timer = null, lock = false;
+
+        function setLv(l) { cfg.lv = l; const items = document.querySelectorAll('.lv-item'); items.forEach((item, idx) => { item.className = (idx + 1 === cfg.lv) ? 'lv-item active' : 'lv-item'; }); }
+        function updateTimeUI(v) { cfg.time = v * 1000; document.getElementById('time-txt').innerText = v; }
+
+        //
+        function speak(t) { 
+            window.speechSynthesis.cancel(); 
+            let m = new SpeechSynthesisUtterance(t); 
+            m.lang = 'zh-HK'; // 強制廣東話
+            m.rate = 0.85;    // 稍微慢一點，方便特教/幼兒學生聽清楚
+            window.speechSynthesis.speak(m); 
+        }
+        
+        function begin() {
+            // 解鎖 iPad 瀏覽器音訊限制
+            document.getElementById('cheer-sound').play().then(()=>document.getElementById('cheer-sound').pause()).catch(()=>{});
+            document.getElementById('settings-panel').style.display = 'none';
+            document.getElementById('home-btn').style.display = 'block';
+            resetRound();
+            spawn();
+        }
+
+        //
+        function resetRound() { 
+            currentItems = [...fatherLib].sort(() => Math.random() - 0.5); 
+            currentIdx = 0; 
+        }
+
+        function spawn() {
+            if (currentIdx >= currentItems.length) resetRound();
+            lock = false;
+            
+            const L = document.getElementById('left-zone');
+            const R = document.getElementById('right-zone');
+            const div = document.getElementById('center-line');
+            const dim = document.getElementById('dim-layer');
+            const suc = document.getElementById('success-container');
+            
+            L.innerHTML = ''; R.innerHTML = ''; dim.style.display = 'none'; suc.innerHTML = ''; suc.style.display = 'none';
+            
+            const target = currentItems[currentIdx];
+            lastTarget = target.n;
+            document.getElementById('target-name').innerText = lastTarget;
+            
+            // 根據關卡播放不同廣東話導引
+            if(cfg.lv === 3) {
+                speak("請你用手指，將右邊嘅 " + lastTarget + " 拖入去左邊心意卡啦！");
+            } else {
+                speak("請你搵出：" + lastTarget);
+            }
+
+            if (cfg.lv === 3) {
+                div.style.display = 'none'; R.style.display = 'flex';
+                initMatchMode(target);
+            } else {
+                div.style.display = 'block'; R.style.display = 'flex';
+                let items = [{d:target, c:true}];
+                
+                // 第一關配對非父親節物件，第二關進行更複雜的物件對比
+                const counter = counterLib[Math.floor(Math.random() * counterLib.length)];
+                items.push({d:counter, c:false});
+                
+                items.sort(() => Math.random() - 0.5);
+                createCard(items[0].d, items[0].c, L);
+                createCard(items[1].d, items[1].c, R);
+            }
+        }
+
+        function createCard(data, isCorrect, container) {
+            const card = document.createElement('div');
+            card.className = 'food-card';
+            card.innerHTML = `<div class="emoji">${data.i}</div><div class="label">${data.n}</div><div class="progress-bar"></div>`;
+
+            //
+            const startAction = (e) => {
+                if (lock) return;
+                if (!isCorrect) { 
+                    // 只有在明確點擊錯誤物件時才提示，避免滑動時語音干擾
+                    if(e.type === 'touchstart' || e.type === 'mousedown') speak("唔係呢個物件，再搵下爸爸嘅野啦！"); 
+                    return; 
+                }
+                const bar = card.querySelector('.progress-bar');
+                if (bar && bar.style.width !== '100%') {
+                    bar.style.transition = `width ${cfg.time}ms linear`;
+                    bar.style.width = '100%';
+                    timer = setTimeout(() => {
+                        lock = true;
+                        document.getElementById('cheer-sound').play();
+                        
+                        //
+                        document.getElementById('dim-layer').style.display = 'block';
+                        const suc = document.getElementById('success-container');
+                        suc.style.display = 'flex';
+                        
+                        const clone = card.cloneNode(true);
+                        clone.classList.add('focus-center');
+                        suc.appendChild(clone);
+                        
+                        speak(data.n + "！答啱喇，你部心意卡好靚呀！");
+                        setTimeout(() => { currentIdx++; spawn(); }, 3000);
+                    }, cfg.time);
+                }
+            };
+
+            const endAction = () => {
+                if (lock) return;
+                clearTimeout(timer);
+                const bar = card.querySelector('.progress-bar');
+                if (bar) { bar.style.transition = 'none'; bar.style.width = '0%'; }
+            };
+
+            // 完美適配 iPad 滑動掃描與點擊
+            card.addEventListener('pointerenter', (e) => { if(e.pointerType === 'touch' || e.pointerType === 'mouse') startAction(e); });
+            card.addEventListener('touchstart', (e) => { e.preventDefault(); startAction(e); });
+            card.addEventListener('touchend', endAction);
+            card.addEventListener('pointerleave', endAction);
+            card.addEventListener('mousedown', startAction);
+            card.addEventListener('mouseup', endAction);
+
+            container.appendChild(card);
+        }
+
+        // 第三關：手眼協調拖拽卡片拼貼
+        function initMatchMode(target) {
+            const L = document.getElementById('left-zone'), R = document.getElementById('right-zone'), S = document.getElementById('game-stage');
+            
+            // 左邊的心意卡底板
+            const box = document.createElement('div'); box.className = 'food-card'; box.style.borderStyle = 'dashed';
+            box.style.borderColor = '#007AFF';
+            box.innerHTML = `<div class="emoji" style="opacity:0.15">${target.i}</div><div class="label" style="color:#007AFF">將物件貼喺度</div>`;
+            
+            // 右邊待拖拽的貼紙
+            const drag = document.createElement('div'); drag.className = 'food-card';
+            drag.innerHTML = `<div class="emoji">${target.i}</div><div class="label">${target.n}</div>`;
+            
+            L.appendChild(box); R.appendChild(drag);
+
+            let active = false, ox, oy;
+            const move = (e) => {
+                if(!active) return;
+                let cX = e.touches ? e.touches[0].clientX : e.clientX;
+                let cY = e.touches ? e.touches[0].clientY : e.clientY;
+                if(drag.parentNode !== S) S.appendChild(drag);
+                drag.style.position = 'absolute';
+                drag.style.left = (cX - ox) + 'px'; drag.style.top = (cY - oy - S.offsetTop) + 'px';
+                drag.style.zIndex = '3000';
+            };
+            const up = (e) => {
+                if(!active) return; active = false;
+                let eX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+                let eY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+                let r = box.getBoundingClientRect();
+                
+                // 判斷是否成功拖入卡片範圍
+                if(eX > r.left && eX < r.right && eY > r.top && eY < r.bottom) {
+                    lock = true;
+                    document.getElementById('cheer-sound').play();
+                    document.getElementById('dim-layer').style.display = 'block';
+                    const suc = document.getElementById('success-container');
+                    suc.style.display = 'flex';
+                    
+                    // 拼貼成功的卡片展示
+                    const finalCard = document.createElement('div');
+                    finalCard.className = 'food-card focus-center';
+                    finalCard.innerHTML = `<div class="emoji">💝</div><div class="label" style="font-size:3rem; color:#ff3b30;">父親節快樂！</div><div class="emoji" style="font-size:6rem;">${target.i}</div>`;
+                    suc.appendChild(finalCard);
+                    
+                    drag.style.display = 'none';
+                    speak("哇！貼好喇！張父親節卡好心意呀，送畀爸爸！");
+                    setTimeout(() => { currentIdx++; spawn(); }, 4000);
+                } else {
+                    R.appendChild(drag); drag.style.position='relative'; drag.style.left='0'; drag.style.top='0';
+                    speak("試下將貼紙放入去藍色框框內啦！");
+                }
+            };
+            
+            drag.addEventListener('touchstart', (e)=>{
+                active=true; let t=e.touches[0]; let rect = drag.getBoundingClientRect();
+                ox = t.clientX - rect.left; oy = t.clientY - rect.top;
+                drag.style.transition='none';
+            });
+            window.addEventListener('touchmove', move, {passive:false});
+            window.addEventListener('touchend', up);
+        }
+
+        document.getElementById('btn-voice').onclick = () => speak("請搵出" + lastTarget);
+    </script>
+</body>
+</html>
